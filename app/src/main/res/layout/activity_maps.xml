@@ -16,24 +16,13 @@
         android:layout_height="match_parent"/>
 
 
-    <Button
-        android:id="@+id/bFlagOn"
-        android:text="Turn On"
-        android:visibility="invisible"
-        android:layout_gravity="top"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
-    <Button
-        android:id="@+id/bFlagOff"
-        android:text="Turn Off"
-        android:visibility="invisible"
-        android:layout_gravity="top"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+
+
 
     <Button
         android:id="@+id/bCheck"
         android:text="check"
+        android:visibility="invisible"
         android:layout_gravity="bottom"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />

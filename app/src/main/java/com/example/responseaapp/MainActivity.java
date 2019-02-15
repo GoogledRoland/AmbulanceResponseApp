@@ -15,6 +15,8 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CompoundButton;
+import android.widget.Switch;
 
 import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.ExoPlayerFactory;
@@ -30,7 +32,7 @@ import java.io.IOException;
 public class MainActivity extends AppCompatActivity {
 
     Button toMap;
-    Button testPlay;
+
     String ambulanceIdentifyer = "Ambulance001";
     DatabaseReference ambulanceInfo;
 
@@ -74,14 +76,8 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        testPlay = findViewById(R.id.bPlayAudioTest);
-        testPlay.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-//                notificationManager.notify(0, mBuilder.build());
-                mediaPlayer.start();
-            }
-        });
+
+
 
 
 

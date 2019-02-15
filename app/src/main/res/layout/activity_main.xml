@@ -9,18 +9,13 @@
 
     <Button
         android:id="@+id/bToMap"
-        android:text="Open Map"
-        android:layout_centerVertical="true"
-        android:layout_centerHorizontal="true"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
-    <Button
-        android:id="@+id/bPlayAudioTest"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
         android:layout_centerVertical="true"
-        android:text="Play"
-        android:layout_below="@id/bToMap"/>
+        android:text="Open Map" />
+
+
+
 
 </RelativeLayout>
