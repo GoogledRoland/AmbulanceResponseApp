@@ -1,6 +1,7 @@
 package com.example.responseaapp;
 
 import android.Manifest;
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
@@ -18,6 +19,8 @@ import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CompoundButton;
+import android.widget.Switch;
 import android.widget.Toast;
 
 import com.firebase.geofire.GeoFire;
@@ -33,9 +36,12 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
@@ -49,7 +55,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private GoogleMap mMap;
 
-    Button checkIt;
+    private static final String TAG = "tagIt";
+
+    Button completeResponse;
 
     private SupportMapFragment mapFragment;
 
@@ -62,6 +70,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     LatLng genLatLng;
+    LatLng emergencyLocLatLng;
 
     String ambulanceIdentifyer = "Ambulance001";
     String emergencyId = "";
@@ -80,6 +89,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     /// DAMN LETS DO SAFE CODING
 
     private Marker mMarker;
+    private Marker emergencyMarker;
 
 
     @Override
@@ -91,12 +101,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-
+        Toast.makeText(this, "onCreate", Toast.LENGTH_SHORT).show();
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
-
-
-        mPreference = PreferenceManager.getDefaultSharedPreferences(this);
-        mEditor = mPreference.edit();
 
 
         myRef = FirebaseDatabase.getInstance().getReference().child("AvailableAmbulance");
@@ -107,6 +113,32 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         geoFireWorking = new GeoFire(putToWorking);
         geoFireWaiting = new GeoFire(myRef);
 
+
+
+        completeResponse = findViewById(R.id.bCompleteResponse);
+
+        completeResponse.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                DatabaseReference rmvEmergency = FirebaseDatabase.getInstance().getReference().child("EmergencyLocation").child(emergencyId);
+                rmvEmergency.removeValue().addOnCompleteListener(new OnCompleteListener<Void>() {
+                    @Override
+                    public void onComplete(@NonNull Task<Void> task) {
+                        emergencyMarker.remove();
+                    }
+                });
+                ambulanceInfo.removeValue();
+
+                geoFireWorking.removeLocation(ambulanceIdentifyer, new GeoFire.CompletionListener() {
+                    @Override
+                    public void onComplete(String key, DatabaseError error) {
+                        startActivity(getIntent());
+                        finish();
+                        overridePendingTransition(0, 0);
+                    }
+                });
+            }
+        });
 
     }
 
@@ -122,7 +154,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mLocationRequest.setFastestInterval(1000);
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         // get updated Location every second
-
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
@@ -155,17 +186,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     mMarker.remove();
                 }
                 mMarker = mMap.addMarker(new MarkerOptions().position(genLatLng).title("My Location"));
+
+
                 ambulanceInfo.addValueEventListener(new ValueEventListener() {
                     @Override
                     public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                         if (!dataSnapshot.exists()) {
                             emergencyId = "";
+
                         } else {
                             emergencyId = dataSnapshot.getValue().toString();
+                            getEmergencyLocation(emergencyId);
+
                         }
                     }
-
-
                     @Override
                     public void onCancelled(@NonNull DatabaseError databaseError) {
 
@@ -186,8 +220,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                             }
                         });
+
                         break;
                     default:
+
                         geoFireWorking.setLocation(ambulanceIdentifyer, new GeoLocation(mLastLocation.getLatitude(), mLastLocation.getLongitude()), new GeoFire.CompletionListener() {
                             @Override
                             public void onComplete(String key, DatabaseError error) {
@@ -200,6 +236,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                             }
                         });
+
                         break;
                 }
 
@@ -216,13 +253,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
-                                ActivityCompat.requestPermissions(MapsActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION},1);
+                                ActivityCompat.requestPermissions(MapsActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
 
                             }
                         })
                         .create()
                         .show();
-            }else{
+            } else {
                 ActivityCompat.requestPermissions(MapsActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
             }
         }
@@ -242,6 +279,69 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         }
     }
+
+    private void getEmergencyLocation(String key) {
+        DatabaseReference dbReff = FirebaseDatabase.getInstance().getReference().child("EmergencyLocation").child(key).child("l");
+        dbReff.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+                double Lat = 0;
+                double Lng = 0;
+                if (dataSnapshot.exists()){
+                    Lat = Double.parseDouble(dataSnapshot.child("0").getValue().toString());
+                    Lng = Double.parseDouble(dataSnapshot.child("1").getValue().toString());
+
+                    emergencyLocLatLng = new LatLng(Lat, Lng);
+                    Log.d(TAG, "onDataChange: " + emergencyLocLatLng);
+                    emergencyMarker = mMap.addMarker(new MarkerOptions().position(emergencyLocLatLng).title("Emergency Location"));
+
+                    Location loc1 = new Location("");
+                    loc1.setLatitude(genLatLng.latitude);
+                    loc1.setLongitude(genLatLng.longitude);
+
+
+                    Location loc2 = new Location("");
+                    loc2.setLatitude(Lat);
+                    loc2.setLongitude(Lng);
+
+                    float distance = loc1.distanceTo(loc2);
+
+                    if (distance < 10) {
+                        completeResponse.setVisibility(View.VISIBLE);
+                    }
+                }else{
+                    if (emergencyMarker != null){
+                        emergencyMarker.remove();
+                    }
+                }
+
+
+
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+
+            }
+        });
+    }
+
+
+
+    private void disconnectAmbulance() {
+        geoFireWaiting.removeLocation(ambulanceIdentifyer, new GeoFire.CompletionListener() {
+            @Override
+            public void onComplete(String key, DatabaseError error) {
+
+            }
+        });
+        checkLocationPermission();
+        if (mFusedLocationProviderClient != null) {
+            mFusedLocationProviderClient.removeLocationUpdates(mLocationCallback);
+            mMap.setMyLocationEnabled(false);
+        }
+    }
+
 
 //
 //
@@ -272,29 +372,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     // CREATED FUNCTIONS
-
-
-    // function to find nearest ambulance
-
-    final int LOCATION_REQUEST_CODE = 1;
-
-
-
-    private void disableLocation() {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-            return;
-        }
-        mMap.setMyLocationEnabled(false);
-    }
-
-
 
 
 }
